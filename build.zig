@@ -4,24 +4,24 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const run_exe = exe: {
-        const module = b.createModule(.{
-            .root_source_file = b.path("src/main.zig"),
-            .target = target,
-            .optimize = optimize,
-        });
+    const test_step = b.step("test", "Run unit tests");
+    const module = b.addModule("lxc-zig", .{
+        .root_source_file = b.path("src/lxccontainer.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
 
-        module.linkSystemLibrary("lxc", .{
-            .needed = true,
-        });
+    module.linkSystemLibrary("lxc", .{
+        .needed = true,
+        .search_strategy = .mode_first,
+    });
 
-        const exe = b.addExecutable(.{ .name = "lxc-zig", .root_module = module });
+    const t = b.addTest(.{
+        .name = "container",
+        .root_module = module,
+    });
 
-        b.installArtifact(exe);
-
-        break :exe b.addRunArtifact(exe);
-    };
-
-    const run_step = b.step("run", "Run the lxc binary immediatly after building");
-    run_step.dependOn(&run_exe.step);
+    const run = b.addRunArtifact(t);
+    test_step.dependOn(&run.step);
 }
